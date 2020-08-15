@@ -330,7 +330,7 @@ function doWatch(
   })
 
   recordInstanceBoundEffect(runner)
-
+  /* 执行watcherEffect函数 */
   if (applyCb) {
     if (immediate) {
       applyCb()
@@ -372,4 +372,166 @@ watchApi的大致逻辑是 ：
 
 ### 5依赖跟踪   
 
-当deps中依赖项改变的时候，会出发proxy属性 set方法 ，然后会遍历属性deps ，执行判断当前effect上有没有scheduler 如果有先执行 scheduler 此事的scheduler就是经过调度处理后，watch函数本身。
+当deps中依赖项改变的时候，会出发proxy属性 set方法 ，然后会遍历属性deps ，执行判断当前effect上有没有scheduler ，在watch处理流程中，是存在scheduler。那么会 执行上一章节中set逻辑中的trigger逻辑。
+
+````js
+ effect.options.scheduler(effect)
+````
+而此时的**scheduler**，有两种情况
+
+````js
+ applyCb ? () => scheduler(applyCb) : scheduler
+````
+
+① 当我们用composition-api 中 watchEffect 是不存在 applyCb回调函数的，此时执行 **scheduler(effect)** ，会在调度中执行当前effect，也就是watchEffect。
+
+② 当我们用composition-api 中 watch，此时会执行 **scheduler(applyCb)** ，那么当前的 applyCb 回调函数（我们这里可以理解watch监听函数）会被传进scheduler执行，而不是当前的watchEffect本身。
+
+
+
+## computed计算属性
+
+之前讲的watch侧重点是对数据更新所产生的**依赖追踪**，而computer侧重点是对**数据的缓存**与**处理引用**，这就是**watch和computed本质的区别**，computed计算属性,上面我们一起分析了watch流程，接下来一起看看computed原理。
+
+
+### computed使用
+
+computed 接受一个getter函数，并为getter返回的值返回一个不可变的reactive ref对象。首先我们先一起看看computed使用
+
+**用法一：Composition API**
+
+````html
+<div id="app">
+   <p>{{ plusOne }}</p>
+</div>
+<script>
+const { ref, computed } = Vue
+Vue.createApp({
+  setup() {
+    const count = ref(1)
+    const plusOne = computed(() => count.value + 1)
+    return {
+      plusOne
+    }
+  }
+}).mount('#app')
+</script>
+````
+
+**用法二：vue2.0options**
+
+````html
+<div id="app">
+   <p>{{ plusOne }}</p>
+</div>
+
+<script>
+Vue.createApp({
+  data: () => ({
+    number: 1
+  }),
+  computed: {
+    plusOne() {
+      return this.number + 1
+    }  
+  }
+}).mount('#app')
+</script>
+
+````
+
+### computed原理
+
+**computer源码**
+
+````js
+export function computed<T>(
+  options: WritableComputedOptions<T>
+): WritableComputedRef<T>
+export function computed<T>(
+  getterOrOptions: ComputedGetter<T> | WritableComputedOptions<T>
+) {
+  let getter: ComputedGetter<T>
+  let setter: ComputedSetter<T>
+  if (isFunction(getterOrOptions)) {  /* 处理只有get函数的逻辑 */
+    getter = getterOrOptions
+    setter = () => {}
+  } else { /* 还有 getter 和 setter情况 */
+    getter = getterOrOptions.get
+    setter = getterOrOptions.set
+  }
+  let dirty = true
+  let value: T
+  let computed: ComputedRef<T>
+  const runner = effect(getter, {
+    lazy: true,
+    computed: true,
+    scheduler: () => {
+      if (!dirty) {
+        dirty = true /* 派发所有引用当前计算属性的副作用函数effect */
+        trigger(computed, TriggerOpTypes.SET, 'value')
+      }
+    }
+  })
+  computed = {
+    _isRef: true,
+    effect: runner,
+    get value() { 
+      if (dirty) {
+        /* 运行computer函数内容 */
+        value = runner()
+        dirty = false
+      }/* 收集引入当前computer属性的依赖 */
+      track(computed, TrackOpTypes.GET, 'value')
+      return value
+    },
+    set value(newValue: T) {
+      setter(newValue)
+    }
+  } as any
+  return computed
+}
+````
+无论是vue3.0 特有的Composition API，还是 vue2.0的options形式，最后走的逻辑都是computed，**Composition AP和options初始化流程会在接下来的章节中讲到。**
+
+### 总结
+三大阶段：
+**①形成computedEffect: 首先根据当前参数类型判断当前计算属性，是单纯getter,还是可以修改属性的 setter 和 getter，将getter作为callback传入effect函数形成一个effect，我们这里姑且称之为computedEffect，computedEffec的调度函数中，是对当前computed里面引用的reactive或者ref变化，而追溯到引入自身计算属性的依赖追踪，然后形成并返回一个computed对象**
+**②依赖收集：当我们引用computed属性的时候，会调用track方法进行依赖收集，会执行和响应式一样的流程，这里重要的是，当在收集本身computed对象依赖的同时，会调用runner()方法，runner()执行了getter方法，此时又收集了当前computed引用的reactive或者ref的依赖项，也就是说，为什么当computed中依赖项更新时候，当前的getter函数会执行，形成新的value** 
+**③派发更新：当reactive或者ref的依赖项更新的时候会触发set然后会触发runner函数的执行，runner函数执行会重新计算出新的value,runner函数执行会执行scheduler函数，scheduler里面会执行当前computed计算属性的依赖项，追踪到所有引用当前computer的依赖项,更新新的value**
+
+例子🌰：
+````html
+<div id="app">
+   <p>{{ plusOne }}</p>
+   <button @input="add" >add</button>
+</div>
+
+<script>
+Vue.createApp({
+  data: () => ({
+    number: 1
+  }),
+  computed: {
+    plusOne() {
+      return this.number + 1
+    }  
+  },
+  methods: {
+    add(){
+      this.number++
+    }
+  }
+}).mount('#app')
+</script>
+
+````
+
+结合computer流程，以及上述例子形成的流程图如下
+
+当上述列子中，点击add按钮方法的时候，会触发 number依赖项的set方法，然后会调用当前 plusOne产生**computedEffect(在源码中runner函数)**，然后会执行plusOne本身，产生新的value，然后回调用**trigger** ，依次执行派发computed产生依赖更新 -> 替换 <p>{{ plusOne }}</p>中的plusOne。
+
+
+## 声明
+
+在讲watch流程和computer过程中，会多次引入scheduler感念，对于vue3.0事件调度，我们会在接下来事件的章节一起和大家分享。
