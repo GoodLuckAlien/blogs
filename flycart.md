@@ -1,0 +1,174 @@
+#小程序飞入购物车(抛物线绘制运动轨迹点)
+
+ > ** 前言：最近有朋友在做小程序的过程中，遇到开发过飞入购物车效果的功能的需求。针对这个情况一些网上的demo，多少会有一些不符合情景的问题（bug）存在，针对这一情况小编决定帮朋友写一个方案来帮助解决问题。
+
+##思考如果实现 ？ 超级简单的！
+
+无论是小程序还是h5飞入购物车无非就是**平抛** ，或者是**上抛**两种情况，对于这两种情况，初中就开始学习抛物线理论知识是完全可以搞定的，高中一年级物理学的自由落体运动，平抛运动就是抛物线理论的具体实现。
+
+![Image text](./images/paowu.jepg)
+
+##构建虚拟直角坐标系，抛物线绘制轨迹点
+
+ **此方案的本质就是，根据购物车起点和终点，分别做为抛物线的两点，这样一个感念就是要以起始点作为直角坐标系（0，0）方便后续其他坐标点的运算。还有一个应该注意的是，如果是配置了上抛h ，就要求最高点（顶点）坐标**
+
+ **此方案均适合 H5 ,小程序**
+ ````js
+
+/**
+ * 飞入购物车，轨迹点绘制
+ * @author  👽
+ * @param {Array} startPoint 起点clientX, clientY值 (必要) 
+ * @param {Array} endPoint   终点clientX, clientY值 (必要)
+ * @param {number} point     点数          (必要) 
+ * @param {number} h         抛物线向上高度(上抛运动)  (可选)
+ * @param {number} hclientX  当存在h情况下，达到最高点时候的clientX值
+ * @return {Array}  [ left ,top ] 值组成的数组
+ */
+function flycart(startPoint, endPoint, point, h = 0, hclientX) {
+    /* 
+    设置startPoint 为(0,0)点 , 此抛物线经过(0,0)点 ，可以推到出模型关系式 y =  ax^2 + bx 或者 y = ax^ 2
+    1 当存在 h 的情况，抛物线会y轴向上偏移 h, 此时的关系式 y = ax^2 + bx
+    2 当不存在h 的情况 ，抛物线startPoint为顶点， 此时关系式 y = ax^2 
+    */
+
+    /* 参数校验 */
+    function Validityparameter() {
+        let isOkey = true
+        Array.isArray(startPoint) && startPoint.length !== 2 && (isOkey = false)
+        Array.isArray(endPoint) && endPoint.length !== 2 && (isOkey = false)
+            (point.constructor !== Number) && (isOkey = false)
+        return isOkey
+    }
+
+    /* 参数验证 */
+    if (!Validityparameter()) {
+        return []
+    }
+
+    /* A点横坐标 */
+    const xA = 0
+    /* A点纵坐标 */
+    const yA = 0
+    /* x轴偏移量 */
+    const offsetX = startPoint[0]
+    /* y轴偏移量 */
+    const offsetY = startPoint[1]
+    /* B点横坐标 */
+    const xB = endPoint[0] - offsetX
+    /* B纵坐标 */
+    const yB = endPoint[1] - offsetY
+
+    /* 根据B点坐标和最大高度h求系数a,b 参数*/
+    let b = 0
+    let a = 0
+
+    /* 计算系数 a ,b */
+    function handerComputer() {
+        if (h < 10) {
+            a = yB / Math.pow(xB, 2)
+        } else {
+            /* 因为一般购物车的情况都是向下，实际上我们购物车的坐标系是反向的，所以我们这里要把h 设置成负值 */
+            h = -h
+            /* 一元二次求解a,b ，现在知道一点  ( xB , yB ) 另外一点 （ maxHx，h ）  */
+            /* 有效达到最高点时候的x坐标 */
+            const effectMaHx = hclientX && Math.abs(hclientX - offsetX) > 0 && Math.abs(hclientX - offsetX) < Math.abs(xB)
+            /* 如果hclientX不满足要求，则选A , B 中点为   */
+            let maxHx = effectMaHx ? (hclientX - offsetX) : (xB + xA) / 2
+            /* 已知两点 求 a , b值  根据解方程式解得 y = ax^2 + bx  */
+            a = ((yB / xB) - (h / maxHx)) / (xB - maxHx)
+            /* 将 a 带入其中一个求解 b */
+            b = (yB - a * Math.pow(xB, 2)) / xB
+        }
+    }
+
+
+    /* 轨迹数组 */
+    const travelList = []
+    /* x 均等分 */
+    const averageX = (xB - xA) / point
+
+    /* 处理直线运动 */
+    function handerLinearMotion(type) {
+        if (type === 'X') {
+            const averageY = (yB - yA) / point
+            for (let i = 1; i <= point; i++) {
+                travelList.push([offsetX, i * averageY + offsetY])
+            }
+        } else {
+            for (let i = 1; i <= point; i++) {
+                travelList.push([offsetX + i * averageX, offsetY])
+            }
+        }
+        return travelList
+    }
+
+    /* 当 xB的绝对值小于10的情况，我们看作Y轴直线运功    */
+    if (Math.abs(xB) < 10) {
+        return handerLinearMotion('X')
+    }
+    /*当 yB的绝对值小于10的情况，我们看作x轴直线运功  */
+    if (Math.abs(yB) < 10) {
+        return handerLinearMotion('Y')
+    }
+
+    handerComputer()
+    /* 绘制路径 */
+    for (let i = 1; i <= point; i++) {
+        const currentX = averageX * i
+        const currentY = Math.pow(currentX, 2) * a + b * currentX - yA
+        travelList.push([currentX + offsetX, currentY + offsetY])
+    }
+
+    return travelList
+}
+
+export default flycart
+ ````
+
+## 效果
+
+ ## 飞入购物车组件？
+ 这里可以把这个方案和组件联系到一起，于是乎飞入购物车组件就搞定了，这里大家要记住的点
+
+
+**1此方案得到的是抛物线各点的left,top值，我们只需要定时改变飞入购物车的图片的left值 ,top就可以**
+
+**2可以通过计数器功能来改变缩放比，说白了就是改变图片transform:scale值**
+
+**3不要忘记给图片加上fixed固定定位哦😄😄😄**
+
+主要方法
+````js
+ startCart(){
+    /* 开启购物车 */
+    /* this.start 储存起始点 clientY clientY  ,this.end储存最终点 clientX clientY*/
+    this.start = {}
+    this.start['x'] = this.data.current['x']
+    this.start['y'] = this.data.current['y']
+    const travelList = flycart([ this.start['x'] , this.start['y'] ] ,[ this.end['x'] , this.end['y'] ],25,50 )
+    this.startAnimate(travelList)
+        },
+ startAnimate(travelList) {
+    let index = 0
+    this.setData({
+        cartHidden: false,
+        bus_x: this.start['x'],
+        bus_y: this.start['y']
+    })
+    if(travelList.length===0) return
+    this.timer = setInterval( ()=> {
+        index++
+        const currentPoint = travelList.shift()
+        this.setData({
+            bus_x: currentPoint[0],
+            bus_y: currentPoint[1],
+            scale: 1 - index / 25
+        })
+        if (travelList.length === 0) {
+            clearInterval(this.timer)
+            this.triggerEvent('close')
+        }
+    }, 33)
+}
+````
