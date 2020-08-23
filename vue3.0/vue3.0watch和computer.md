@@ -372,7 +372,7 @@ watchApi的大致逻辑是 ：
 
 ### 5依赖跟踪   
 
-当deps中依赖项改变的时候，会出发proxy属性 set方法 ，然后会遍历属性deps ，执行判断当前effect上有没有scheduler ，在watch处理流程中，是存在scheduler。那么会 执行上一章节中set逻辑中的trigger逻辑。
+当deps中依赖项改变的时候，会出发proxy属性 set方法 ，然后会遍历属性deps ，执行判断当前effect上有没有scheduler ，在watch处理流程中，是存在scheduler。那么会 执行响应式set逻辑中的trigger逻辑。
 
 ````js
  effect.options.scheduler(effect)
@@ -386,6 +386,45 @@ watchApi的大致逻辑是 ：
 ① 当我们用composition-api 中 watchEffect 是不存在 applyCb回调函数的，此时执行 **scheduler(effect)** ，会在调度中执行当前effect，也就是watchEffect。
 
 ② 当我们用composition-api 中 watch，此时会执行 **scheduler(applyCb)** ，那么当前的 applyCb 回调函数（我们这里可以理解watch监听函数）会被传进scheduler执行，而不是当前的watchEffect本身。
+
+### 举例分析
+
+
+
+**拿watch为 下面我们举一个例子来解析watch整个流程**
+
+例子🌰：
+````html
+<div id="app">
+   <p>{{ count }}</p>
+   <button @input="add" >add</button>
+</div>
+
+<script>
+const { reactive, watch, toRefs } = Vue
+Vue.createApp({
+  setup(){
+    const state = reactive({
+       count:1,
+    })
+    const add = () => state.count++
+    watch(state.count,(count, prevCount) => {
+       console.log('新的count=' , count )
+    })
+    return {
+      ...toRefs(state),
+      add
+    }
+  }
+}).mount('#app')
+</script>
+
+````
+如上所示，当我们点击按钮的时候 ,触发 **state.count++** , watch监听函数applyCb就会触发，打印出新的count ，那么我们把整个流程，结合这个例子做一个图解。
+
+
+
+
 
 
 
