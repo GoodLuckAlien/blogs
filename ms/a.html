@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+    <button id='button'>点击</button>  
+</body>
+<script>
+
+/* 实现一个简单的队列结构 */
+
+class Queue {
+    constructor(){
+        this.queue = []
+    }
+    /* 进入队列 */
+    enqueue(item){
+        this.queue.push(item)
+    }
+    /* 移除队列 */
+    dequeue(){
+        this.queue.shift()
+    }
+    /* 获取队列长度 */
+    size(){
+        return this.queue.length
+    }
+    /* 判断是否为空 */
+}
+
+
+</script>
+</html>
