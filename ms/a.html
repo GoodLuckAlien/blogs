@@ -11,27 +11,11 @@
 </body>
 <script>
 
-/* 实现一个简单的队列结构 */
+let a = Object.create(null)
+let b = {}
 
-class Queue {
-    constructor(){
-        this.queue = []
-    }
-    /* 进入队列 */
-    enqueue(item){
-        this.queue.push(item)
-    }
-    /* 移除队列 */
-    dequeue(){
-        this.queue.shift()
-    }
-    /* 获取队列长度 */
-    size(){
-        return this.queue.length
-    }
-    /* 判断是否为空 */
-}
-
+console.log(a.__proto__ )
+console.log(b.__proto__)
 
 </script>
 </html>
