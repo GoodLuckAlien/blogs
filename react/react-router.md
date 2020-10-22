@@ -1,4 +1,6 @@
 ①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳
+<code style="color: rgb(71, 101, 130);">Date, Array, Math, Number, Boolean, String, Array, RegExp, Function</code>
+
 # react-router源码解析
 
  >  写在前面：为什么要学习react-router底层源码? 为什么要弄明白整个路由流程？ 笔者个人感觉学习react-router，有助于我们学习单页面应用(spa)路由跳转原理，让我们理解从history.push，到组件页面切换的全套流程，使我们在面试的时候不再为路由相关的问题发怵，废话不说，让我们开启深入react-router源码之旅吧。
@@ -612,6 +614,7 @@ function Redirect({ computedMatch, to, push = false }) {
 我们还是拿history模式作为参考，当我们调用history.push方法，首先调用history的push方法，通过history.pushState来改变当前url，接下来触发history下面的setState方法，接下来的步骤就和上面一模一样了，这里就不一一说了。
 
 ### 我们用一幅图来表示各个路由组件之间的关系。
+
 
 希望读过此篇文章的朋友，能够明白react-router的整个流程，代码逻辑不是很难理解。整个流程我给大家分析了一遍，希望同学们能主动看一波源码，把整个流程搞明白。**纸上得来终觉浅,绝知此事要躬行。**
 
