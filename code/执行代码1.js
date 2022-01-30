@@ -65,3 +65,15 @@ setTimeout(() => {
     console.log(12);
   });
 });
+
+
+console.log(12)
+
+class app {
+  constructor(){
+
+  }
+  setup(){
+
+  }
+}

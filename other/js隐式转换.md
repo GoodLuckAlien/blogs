@@ -7,7 +7,7 @@ const a = {
   i: 1,
   toString: function () {
     return a.i++;
-  }
+  },
 }
 if (a == 1 && a == 2 && a == 3) {
   console.log('hello world!');
@@ -20,9 +20,10 @@ if (a == 1 && a == 2 && a == 3) {
 涉及隐式转换最多的两个运算符 + 和 ==。
 
 隐式转换中主要涉及到三种转换：
-1、将值转为原始值，ToPrimitive()。
-2、将值转为数字，ToNumber()。
-3、将值转为字符串，ToString()
+
+* 1、将值转为原始值，ToPrimitive()。
+* 2、将值转为数字，ToNumber()。
+* 3、将值转为字符串，ToString()
 
 通过**ToPrimitive**将值转换为原始值
 
@@ -31,8 +32,8 @@ ToPrimitive(input, PreferredType?)
 **1 如果PreferredType被标记为Number，则会进行下面的操作流程来转换输入的值。**
 
 1、如果输入的值已经是一个原始值，则直接返回它
-2、否则，如果输入的值是一个对象，则调用该对象的valueOf()方法，
-   如果valueOf()方法的返回值是一个原始值，则返回这个原始值。
+2、否则，如果输入的值是一个对象，则调用该对象的 valueOf() 方法，
+   如果 valueOf() 方法的返回值是一个原始值，则返回这个原始值。
 3、否则，调用这个对象的toString()方法，如果toString()方法返回的是一个原始值，则返回这个原始值。
 4、否则，抛出TypeError异常。
 
@@ -45,6 +46,8 @@ ToPrimitive(input, PreferredType?)
    如果valueOf()方法的返回值是一个原始值，则返回这个原始值。
 4、否则，抛出TypeError异常。
 
+
+//
 1、该对象为Date类型，则PreferredType被设置为String
 2、否则，PreferredType被设置为Number
 
@@ -163,6 +166,7 @@ null              0
 
 
 类型相同时，没有类型转换，主要注意NaN不与任何值相等，包括它自己，即NaN !== NaN。
+
 类型不相同时，
 
 **1、x,y 为null、undefined两者中一个   // 返回true**

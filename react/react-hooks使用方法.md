@@ -476,3 +476,55 @@ const DemoUseCallback=({ id })=>{
 ##4总结
 
 react-hooks的诞生，也不是说它能够完全代替class声明的组件，对于业务比较复杂的组件，class组件还是首选，只不过我们可以把class组件内部拆解成funciton组件，根据业务需求，哪些负责逻辑交互，哪些需要动态渲染，然后配合usememo等api，让性能提升起来。react-hooks使用也有一些限制条件，比如说不能放在流程控制语句中，执行上下文也有一定的要求。总体来说，react-hooks还是很不错的，值得大家去学习和探索。
+
+
+
+### react是怎么保证多个useState的相互独立的？为什么hooks不能写在 条件语句中
+
+
+还是看上面给出的`ExampleWithManyStates`例子，我们调用了三次`useState`，每次我们传的参数只是一个值（如42，‘banana’），我们根本没有告诉`react`这些值对应的`key`是哪个，那`react`是怎么保证这三个`useState`找到它对应的`state`呢？
+答案是，`react`是根据`useState`出现的顺序来定的。我们具体来看一下
+
+````js
+ //第一次渲染
+  useState(42);  //将age初始化为42
+  useState('banana');  //将fruit初始化为banana
+  useState([{ text: 'Learn Hooks' }]); //...
+
+  //第二次渲染
+  useState(42);  //读取状态变量age的值（这时候传的参数42直接被忽略）
+  useState('banana');  //读取状态变量fruit的值（这时候传的参数banana直接被忽略）
+  useState([{ text: 'Learn Hooks' }]); //...
+````
+
+假如我们改一下代码：
+
+````js
+let showFruit = true;
+function ExampleWithManyStates() {
+  const [age, setAge] = useState(42);
+  
+  if(showFruit) {
+    const [fruit, setFruit] = useState('banana');
+    showFruit = false;
+  }
+ 
+  const [todos, setTodos] = useState([{ text: 'Learn Hooks' }]);
+````
+这样一来，
+
+
+````js
+//第一次渲染
+  useState(42);  //将age初始化为42
+  useState('banana');  //将fruit初始化为banana
+  useState([{ text: 'Learn Hooks' }]); //...
+
+  //第二次渲染
+  useState(42);  //读取状态变量age的值（这时候传的参数42直接被忽略）
+  // useState('banana');  
+  useState([{ text: 'Learn Hooks' }]); //读取到的却是状态变量fruit的值，导致报错
+````
+
+**鉴于此，react规定我们必须把hooks写在函数的最外层，不能写在ifelse等条件语句当中，来确保hooks的执行顺序一致。**
+
